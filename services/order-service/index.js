@@ -16,7 +16,7 @@ const supabase = createClient(
 // Test connection on startup
 (async () => {
   try {
-    const { data, error } = await supabase.from("users").select("count");
+    const { data, error } = await supabase.from("orders").select("count");
     if (error) throw error;
     console.log("✅ Supabase connected successfully");
   } catch (error) {
@@ -48,7 +48,7 @@ app.get("/orders", async (req, res) => {
 
 app.post("/orders", async (req, res) => {
   try {
-    const { username, email } = req.body;
+    const { product_id, user_id, quantity } = req.body;
     
     const { data, error } = await supabase
       .from("users")

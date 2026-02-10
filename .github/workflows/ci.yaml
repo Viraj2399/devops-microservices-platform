@@ -98,11 +98,10 @@ jobs:
           projectBaseDir: frontend
           args: >
             -Dsonar.projectKey=frontend-service
-            -Dsonar.projectName="Frontend Service"
-            -Dsonar.sources=.
-            -Dsonar.exclusions="**/node_modules/**,**/dist/**"
+            -Dsonar.projectName=Frontend_Service
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/public/**
             -Dsonar.qualitygate.wait=true
-
 # --------------------------------------------------
 # 5️⃣ SONARQUBE – BACKEND MICROSERVICES (USING MATRIX)
 # --------------------------------------------------

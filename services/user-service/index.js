@@ -1,44 +1,56 @@
-const express = require("express");
-const cors = require("cors");
-const { createClient } = require("@supabase/supabase-js");
-const path = require("path");
+// -------------------------------
+// User Service (ES Modules Version)
+// Supabase + Express + Top-Level Await
+// -------------------------------
 
-require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
+import express from "express";
+import cors from "cors";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Fix __dirname issue in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
 
-// ✅ Enable CORS (VERY IMPORTANT)
-app.use(cors({
-  origin: "*", // later you can restrict this
-}));
+// ✅ Enable CORS
+app.use(
+  cors({
+    origin: "*", // later restrict for production
+  })
+);
 
 app.use(express.json());
 
-// Initialize Supabase client
+//  Initialize Supabase Client
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
 
-// ✅ Safe startup connection test
-(async () => {
-  try {
-    const { error } = await supabase
-      .from("users")
-      .select("*")
-      .limit(1);
+try {
+  const { error } = await supabase.from("users").select("*").limit(1);
 
-    if (error) throw error;
-    console.log("✅ Supabase connected successfully");
-  } catch (error) {
-    console.error("❌ Error connecting to Supabase:", error.message);
-  }
-})();
+  if (error) throw error;
 
+  console.log("✅ Supabase connected successfully");
+} catch (error) {
+  console.error("❌ Supabase connection failed:", error.message);
+  process.exit(1);
+}
+
+// Health Check Route
 app.get("/health", (req, res) => {
   res.json({ status: "User Service running ✅" });
 });
 
+// Get All Users
 app.get("/users", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -47,20 +59,27 @@ app.get("/users", async (req, res) => {
       .order("id", { ascending: true });
 
     if (error) {
-      console.error("Supabase error:", error);
-      return res.status(500).json(error);
+      console.error("Supabase error:", error.message);
+      return res.status(500).json({ error: error.message });
     }
 
     res.json(data);
   } catch (err) {
-    console.error("Unexpected error:", err);
+    console.error("Unexpected error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// Create New User
 app.post("/users", async (req, res) => {
   try {
     const { username, email } = req.body;
+
+    if (!username || !email) {
+      return res.status(400).json({
+        error: "Username and email are required",
+      });
+    }
 
     const { data, error } = await supabase
       .from("users")
@@ -69,17 +88,19 @@ app.post("/users", async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Insert error:", error);
-      return res.status(500).json(error);
+      console.error("Insert error:", error.message);
+      return res.status(500).json({ error: error.message });
     }
 
     res.status(201).json(data);
   } catch (err) {
-    console.error("Unexpected error:", err);
+    console.error("Unexpected error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(3001, () =>
-  console.log("User Service running on port 3001")
-);
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  console.log(`✅ User Service running on port ${PORT}`);
+});

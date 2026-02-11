@@ -1,14 +1,9 @@
-// -------------------------------
-// User Service (ES Modules Version)
-// Supabase + Express + Top-Level Await
-// -------------------------------
-
 import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Fix __dirname issue in ES Modules
 const __filename = fileURLToPath(import.meta.url);

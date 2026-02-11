@@ -14,21 +14,23 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
 
-// ✅ Enable CORS
+// ✅ Enable CORS (Safe for Vite frontend on port 8080)
 app.use(
   cors({
-    origin: "*", // later restrict for production
+    origin: "http://localhost:8080",
+    methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
 app.use(express.json());
 
-//  Initialize Supabase Client
+// ✅ Initialize Supabase Client
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
 
+// ✅ Top-Level Await Connection Test
 try {
   const { error } = await supabase.from("users").select("*").limit(1);
 
@@ -54,13 +56,11 @@ app.get("/users", async (req, res) => {
       .order("id", { ascending: true });
 
     if (error) {
-      console.error("Supabase error:", error.message);
       return res.status(500).json({ error: error.message });
     }
 
     res.json(data);
   } catch (err) {
-    console.error("Unexpected error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -83,17 +83,16 @@ app.post("/users", async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Insert error:", error.message);
       return res.status(500).json({ error: error.message });
     }
 
     res.status(201).json(data);
   } catch (err) {
-    console.error("Unexpected error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// Start Server
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {

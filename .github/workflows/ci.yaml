@@ -37,8 +37,8 @@ jobs:
       - name: Install Backend Dependencies
         run: |
           cd app/services/user-service && npm install
-          cd ../../order-service && npm install
-          cd ../../payment-service && npm install
+          cd app/services/order-service && npm install
+          cd app/services/payment-service && npm install
 
 # --------------------------------------------------
 # 2️⃣ GITLEAKS – SECRET SCAN

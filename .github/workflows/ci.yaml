@@ -29,16 +29,16 @@ jobs:
       # Frontend build
       - name: Build Frontend
         run: |
-          cd frontend
+          cd app/frontend
           npm install
           npm run build
 
       # Backend install (all microservices)
       - name: Install Backend Dependencies
         run: |
-          cd services/user-service && npm install
-          cd ../order-service && npm install
-          cd ../payment-service && npm install
+          cd app/services/user-service && npm install
+          cd ../../order-service && npm install
+          cd ../../payment-service && npm install
 
 # --------------------------------------------------
 # 2️⃣ GITLEAKS – SECRET SCAN
@@ -86,7 +86,7 @@ jobs:
 
       - name: Install Frontend Dependencies
         run: |
-          cd frontend
+          cd app/frontend
           npm install
 
       - name: SonarQube Scan (Frontend)
@@ -121,7 +121,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd services/${{ matrix.service }}
+          cd app/services/${{ matrix.service }}
           npm install
 
       - name: SonarQube Scan
@@ -130,7 +130,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
-          projectBaseDir: services/${{ matrix.service }}
+          projectBaseDir: app/services/${{ matrix.service }}
           args: >
             -Dsonar.projectKey=${{ matrix.service }}
             -Dsonar.projectName="${{ matrix.service }}"

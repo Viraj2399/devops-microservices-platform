@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
-      - 'gitops/**'          # prevent infinite loop when manifest is updated by bot
+      - 'gitops/**'          
       - 'infrastructure/**'
   pull_request:
     branches: [ "main" ]
@@ -225,7 +225,7 @@ jobs:
             gitops/apps/frontend/deployment.yaml
 
           sed -i "s|${{ env.ACR_LOGIN_SERVER }}/user-service:.*|${{ env.ACR_LOGIN_SERVER }}/user-service:${{ github.sha }}|g" \
-            gitops/apps/user-services/deployment.yaml
+            gitops/apps/user-service/deployment.yaml
 
           sed -i "s|${{ env.ACR_LOGIN_SERVER }}/order-service:.*|${{ env.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }}|g" \
             gitops/apps/order-service/deployment.yaml

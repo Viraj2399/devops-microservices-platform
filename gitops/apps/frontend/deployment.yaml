@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: myappdevydb8h3.azurecr.io/frontend:727ccba57332c45672468c37ded616614ab082d7
+        image: myappdevydb8h3.azurecr.io/frontend:ade12ebb914819539ff15aa1665e0ee37a70d77e
         ports:
         - containerPort: 80
         env:

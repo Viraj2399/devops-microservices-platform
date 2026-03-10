@@ -8,6 +8,8 @@ on:
 
 env:
   NODE_VERSION: 20
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
 
 jobs:
 # --------------------------------------------------
@@ -138,6 +140,72 @@ jobs:
             -Dsonar.exclusions="**/node_modules/**,**/build/**"
             -Dsonar.qualitygate.wait=true
 
+# --------------------------------------------------
+# 6️⃣ BUILD DOCKER IMAGES
+# --------------------------------------------------
+  docker-build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [sonar-frontend, sonar-backend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: |
+          docker build -t $ACR_LOGIN_SERVER/frontend:latest ./app/frontend
+
+      - name: Build user-service image
+        run: |
+          docker build -t $ACR_LOGIN_SERVER/user-service:latest ./app/services/user-service
+
+      - name: Build order-service image
+        run: |
+          docker build -t $ACR_LOGIN_SERVER/order-service:latest ./app/services/order-service
+
+      - name: Build payment-service image
+        run: |
+          docker build -t $ACR_LOGIN_SERVER/payment-service:latest ./app/services/payment-service
+
+# --------------------------------------------------
+# 7️⃣ LOGIN TO AZURE
+# --------------------------------------------------
+  azure-login:
+    name: Azure Login
+    runs-on: ubuntu-latest
+    needs: docker-build
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+# --------------------------------------------------
+# 8️⃣ PUSH IMAGES TO ACR
+# --------------------------------------------------
+  push-images:
+    name: Push Images to ACR
+    runs-on: ubuntu-latest
+    needs: azure-login
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to ACR
+        run: az acr login --name $ACR_NAME
+
+      - name: Push frontend
+        run: docker push $ACR_LOGIN_SERVER/frontend:latest
+
+      - name: Push user-service
+        run: docker push $ACR_LOGIN_SERVER/user-service:latest
+
+      - name: Push order-service
+        run: docker push $ACR_LOGIN_SERVER/order-service:latest
+
+      - name: Push payment-service
+        run: docker push $ACR_LOGIN_SERVER/payment-service:latest
 
 
 

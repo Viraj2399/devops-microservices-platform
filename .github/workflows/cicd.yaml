@@ -1,0 +1,282 @@
+name: DevOps Microservices CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - 'gitops/**'          # prevent infinite loop when manifest is updated by bot
+      - 'infrastructure/**'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  NODE_VERSION: 20
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
+
+jobs:
+# --------------------------------------------------
+# 1️⃣ COMPILE / BUILD CHECK
+# --------------------------------------------------
+  compile:
+    name: Compile & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Frontend
+        run: |
+          cd app/frontend
+          npm install
+          npm run build
+
+      - name: Install Backend Dependencies
+        run: |
+          cd app/services/user-service && npm install
+          cd ../order-service && npm install
+          cd ../payment-service && npm install
+
+# --------------------------------------------------
+# 2️⃣ GITLEAKS – SECRET SCAN
+# --------------------------------------------------
+  gitleaks:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    needs: compile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+
+# --------------------------------------------------
+# 3️⃣ TRIVY – SECURITY SCAN
+# --------------------------------------------------
+  trivy:
+    name: Vulnerability Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: compile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+# --------------------------------------------------
+# 4️⃣ SONARQUBE – FRONTEND
+# --------------------------------------------------
+  sonar-frontend:
+    name: SonarQube - Frontend
+    runs-on: ubuntu-latest
+    needs: [gitleaks, trivy]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd app/frontend
+          npm install
+
+      - name: SonarQube Scan (Frontend)
+        uses: SonarSource/sonarqube-scan-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          projectBaseDir: app/frontend
+          args: >
+            -Dsonar.projectKey=frontend-service
+            -Dsonar.projectName=Frontend_Service
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/public/**
+            -Dsonar.qualitygate.wait=true
+
+# --------------------------------------------------
+# 5️⃣ SONARQUBE – BACKEND MICROSERVICES (MATRIX)
+# --------------------------------------------------
+  sonar-backend:
+    name: SonarQube - Backend (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    needs: [gitleaks, trivy]
+    strategy:
+      matrix:
+        service: [user-service, order-service, payment-service]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          cd app/services/${{ matrix.service }}
+          npm install
+
+      - name: SonarQube Scan (${{ matrix.service }})
+        uses: SonarSource/sonarqube-scan-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          projectBaseDir: app/services/${{ matrix.service }}
+          args: >
+            -Dsonar.projectKey=${{ matrix.service }}
+            -Dsonar.projectName="${{ matrix.service }}"
+            -Dsonar.sources=.
+            -Dsonar.exclusions="**/node_modules/**,**/build/**"
+            -Dsonar.qualitygate.wait=true
+
+# --------------------------------------------------
+# 6️⃣ BUILD & PUSH IMAGES TO ACR
+# --------------------------------------------------
+  push-images:
+    name: Build & Push Images to ACR
+    runs-on: ubuntu-latest
+    needs: [sonar-frontend, sonar-backend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build & Push frontend
+        run: |
+          docker build \
+            -t ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/frontend:latest \
+            ./app/frontend
+          docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
+
+      - name: Build & Push user-service
+        run: |
+          docker build \
+            -t ${{ env.ACR_LOGIN_SERVER }}/user-service:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/user-service:latest \
+            ./app/services/user-service
+          docker push ${{ env.ACR_LOGIN_SERVER }}/user-service:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/user-service:latest
+
+      - name: Build & Push order-service
+        run: |
+          docker build \
+            -t ${{ env.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/order-service:latest \
+            ./app/services/order-service
+          docker push ${{ env.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/order-service:latest
+
+      - name: Build & Push payment-service
+        run: |
+          docker build \
+            -t ${{ env.ACR_LOGIN_SERVER }}/payment-service:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/payment-service:latest \
+            ./app/services/payment-service
+          docker push ${{ env.ACR_LOGIN_SERVER }}/payment-service:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/payment-service:latest
+
+# --------------------------------------------------
+# 7️⃣ UPDATE GITOPS MANIFESTS  (triggers FluxCD → AKS)
+# --------------------------------------------------
+  update-gitops:
+    name: Update GitOps Manifests
+    runs-on: ubuntu-latest
+    needs: push-images
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_TOKEN }}
+          fetch-depth: 0
+
+      - name: Update image tags in manifests
+        run: |
+          sed -i "s|${{ env.ACR_LOGIN_SERVER }}/frontend:.*|${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }}|g" \
+            gitops/apps/frontend/deployment.yaml
+
+          sed -i "s|${{ env.ACR_LOGIN_SERVER }}/user-service:.*|${{ env.ACR_LOGIN_SERVER }}/user-service:${{ github.sha }}|g" \
+            gitops/apps/user-services/deployment.yaml
+
+          sed -i "s|${{ env.ACR_LOGIN_SERVER }}/order-service:.*|${{ env.ACR_LOGIN_SERVER }}/order-service:${{ github.sha }}|g" \
+            gitops/apps/order-service/deployment.yaml
+
+          sed -i "s|${{ env.ACR_LOGIN_SERVER }}/payment-service:.*|${{ env.ACR_LOGIN_SERVER }}/payment-service:${{ github.sha }}|g" \
+            gitops/apps/payment-service/deployment.yaml
+
+      - name: Commit and push updated manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add gitops/
+          git diff --staged --quiet || git commit -m "chore: update images to ${{ github.sha }}"
+          git push
+
+# --------------------------------------------------
+# 8️⃣ VERIFY – CONFIRM FLUXCD RECONCILED ON AKS
+# --------------------------------------------------
+  verify-deployment:
+    name: Verify AKS Deployment via FluxCD
+    runs-on: ubuntu-latest
+    needs: update-gitops
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+
+      - name: Install Flux CLI
+        run: curl -s https://fluxcd.io/install.sh | sudo bash
+
+      - name: Trigger Flux reconciliation
+        run: |
+          echo "⏳ Triggering immediate Flux reconciliation..."
+          flux reconcile kustomization apps --with-source --timeout=5m
+
+      - name: Verify all deployments are healthy
+        run: |
+          echo "🔍 Checking rollout status for all services..."
+          kubectl rollout status deployment/frontend        -n dev --timeout=3m
+          kubectl rollout status deployment/user-service    -n dev --timeout=3m
+          kubectl rollout status deployment/order-service   -n dev --timeout=3m
+          kubectl rollout status deployment/payment-service -n dev --timeout=3m
+
+      - name: Show final pod status
+        if: always()
+        run: |
+          echo "📋 Final pod status in dev namespace:"
+          kubectl get pods -n dev -o wide

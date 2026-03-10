@@ -270,13 +270,13 @@ jobs:
       - name: Verify all deployments are healthy
         run: |
           echo "🔍 Checking rollout status for all services..."
-          kubectl rollout status deployment/frontend        -n dev --timeout=3m
-          kubectl rollout status deployment/user-service    -n dev --timeout=3m
-          kubectl rollout status deployment/order-service   -n dev --timeout=3m
-          kubectl rollout status deployment/payment-service -n dev --timeout=3m
+          kubectl rollout status deployment/frontend        -n microservices --timeout=3m
+          kubectl rollout status deployment/user-service    -n microservices --timeout=3m
+          kubectl rollout status deployment/order-service   -n microservices --timeout=3m
+          kubectl rollout status deployment/payment-service -n microservices --timeout=3m
 
       - name: Show final pod status
         if: always()
         run: |
-          echo "📋 Final pod status in dev namespace:"
-          kubectl get pods -n dev -o wide
+          echo "📋 Final pod status in microservices namespace:"
+          kubectl get pods -n microservices -o wide

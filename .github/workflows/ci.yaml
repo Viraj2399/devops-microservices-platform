@@ -37,8 +37,8 @@ jobs:
       - name: Install Backend Dependencies
         run: |
           cd app/services/user-service && npm install
-          cd app/services/order-service && npm install
-          cd app/services/payment-service && npm install
+          cd ../order-service && npm install
+          cd ../payment-service && npm install
 
 # --------------------------------------------------
 # 2️⃣ GITLEAKS – SECRET SCAN
@@ -95,7 +95,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
-          projectBaseDir: frontend
+          projectBaseDir: app/frontend
           args: >
             -Dsonar.projectKey=frontend-service
             -Dsonar.projectName=Frontend_Service

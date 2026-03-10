@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: order-service
-        image: ${ACR_NAME}.azurecr.io/order-service:latest
+        image: myappdevydb8h3.azurecr.io/order-service:latest
         ports:
         - containerPort: 3002

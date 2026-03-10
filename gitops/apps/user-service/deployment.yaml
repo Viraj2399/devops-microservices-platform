@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: ${ACR_NAME}.azurecr.io/user-service:latest
+        image: myappdevydb8h3.azurecr.io/user-service:latest
         ports:
         - containerPort: 3001

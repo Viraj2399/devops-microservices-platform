@@ -18,3 +18,14 @@ spec:
         image: myappdevydb8h3.azurecr.io/payment-service:ade12ebb914819539ff15aa1665e0ee37a70d77e
         ports:
         - containerPort: 3003
+        env:
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secret
+              key: SUPABASE_URL
+        - name: SUPABASE_ANON_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secret
+              key: SUPABASE_ANON_KEY

@@ -25,3 +25,5 @@ spec:
           value: "http://order-service:3002"
         - name: VITE_PAYMENT_API_URL
           value: "http://payment-service:3003"
+        - name: VITE_USER_SERVICE_URL
+          value: "http://<USER-SERVICE-EXTERNAL-IP>"

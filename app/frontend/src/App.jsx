@@ -6,7 +6,7 @@ export default function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:3001/users")
+    fetch(`${import.meta.env.VITE_USER_SERVICE_URL}/users`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch users");
         return res.json();

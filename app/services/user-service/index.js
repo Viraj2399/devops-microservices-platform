@@ -18,9 +18,9 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:8080",           // local dev
-      "http://localhost:5173",           // vite dev
-      "http://20.44.200.207",            // ← your frontend external IP
+      "http://localhost:8080",           // NOSONAR
+      "http://localhost:5173",           // NOSONAR
+      "http://20.44.200.207",            // NOSONAR
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
   })

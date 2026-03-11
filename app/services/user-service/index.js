@@ -17,7 +17,11 @@ const app = express();
 // ✅ Enable CORS (Safe for Vite frontend on port 8080)
 app.use(
   cors({
-    origin: "http://localhost:8080",
+    origin: [
+      "http://localhost:8080",           // local dev
+      "http://localhost:5173",           // vite dev
+      "http://20.44.200.207",            // ← your frontend external IP
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );

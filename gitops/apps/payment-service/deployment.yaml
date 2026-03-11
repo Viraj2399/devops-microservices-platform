@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: payment-service
-        image: myappdevydb8h3.azurecr.io/payment-service:144f10931601ba1b45cdf05c75859a9eb72752a4
+        image: myappdevydb8h3.azurecr.io/payment-service:64d5458281c571a5cc727b96fd2fe2056838007a
         ports:
         - containerPort: 3003
         env:

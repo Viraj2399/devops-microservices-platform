@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: myappdevydb8h3.azurecr.io/user-service:57166ba68fedf94b1b93c3256fc5f721ae2e48f6
+        image: myappdevydb8h3.azurecr.io/user-service:bb05f64d38763e95d3a7f2119b7954f8d0eb48c9
         ports:
         - containerPort: 3001
         env:
